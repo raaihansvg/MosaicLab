@@ -34,7 +34,6 @@ hidden = (
     + collect_submodules('sklearn.utils')
     + collect_submodules('sklearn.cluster')
     + [
-        # sklearn
         'sklearn',
         'sklearn.cluster',
         'sklearn.cluster._kmeans',
@@ -47,38 +46,31 @@ hidden = (
         'sklearn.utils.murmurhash',
         'sklearn.metrics._pairwise_distances_reduction._datasets_pair',
         'sklearn.metrics._pairwise_distances_reduction._middle_term_computer',
-        # openpyxl
         'openpyxl',
         'openpyxl.styles',
         'openpyxl.utils',
         'openpyxl.workbook',
         'openpyxl.writer.excel',
         'openpyxl.reader.excel',
-        # matplotlib backends
         'matplotlib.backends.backend_tkagg',
         'matplotlib.backends.backend_agg',
         'matplotlib.figure',
         'matplotlib.patches',
-        # PIL / Pillow
         'PIL',
         'PIL.Image',
         'PIL.ImageTk',
-        # pandas
         'pandas',
         'pandas._libs.tslibs.np_datetime',
         'pandas._libs.tslibs.nattype',
         'pandas._libs.tslibs.timedeltas',
         'pandas._libs.skiplist',
-        # numpy
         'numpy',
         'numpy.core._multiarray_umath',
         'numpy.core._multiarray_tests',
-        # tkinter (usually built-in but listed for safety)
         'tkinter',
         'tkinter.ttk',
         'tkinter.filedialog',
         'tkinter.messagebox',
-        # threading, io
         'threading',
         'io',
         'warnings',
