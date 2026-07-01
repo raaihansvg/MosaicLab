@@ -14,11 +14,9 @@ def modern_file_picker(title, filetypes_label="Image Files", filetypes_ext="*.jp
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
                 return result.stdout.strip()
-            return "" # User cancelled or error
+            return "" 
         except FileNotFoundError:
             pass
-            
-    # Fallback
     ext_list = filetypes_ext.split()
     return filedialog.askopenfilename(title=title, filetypes=[(filetypes_label, " ".join(ext_list))])
 
@@ -37,20 +35,15 @@ def modern_save_picker(title, default_ext=".xlsx", filetypes_label="Excel Files"
                 if not path.endswith(default_ext):
                     path += default_ext
                 return path
-            return "" # User cancelled
+            return ""
         except FileNotFoundError:
             pass
-            
-    # Fallback
     ext_list = filetypes_ext.split()
     return filedialog.asksaveasfilename(title=title, defaultextension=default_ext, filetypes=[(filetypes_label, " ".join(ext_list))])
 
 def interpolate_color(hex1, hex2, factor):
-    """Interpolate between two hex colors. factor is 0.0 to 1.0"""
     hex1 = hex1.lstrip('#')
     hex2 = hex2.lstrip('#')
-    
-    # Handle short hex
     if len(hex1) == 3: hex1 = ''.join([c*2 for c in hex1])
     if len(hex2) == 3: hex2 = ''.join([c*2 for c in hex2])
     
@@ -68,8 +61,6 @@ def animate_widget_color(widget, prop, start_color, end_color, steps=15, current
     if current_step > steps:
         widget.configure(**{prop: end_color})
         return
-        
-    # Ease out cubic: f(t) = 1 - (1-t)^3
     t = current_step / steps
     factor = 1 - pow(1 - t, 3)
     
@@ -78,14 +69,14 @@ def animate_widget_color(widget, prop, start_color, end_color, steps=15, current
         widget.configure(**{prop: current_color})
         widget.after(delay, animate_widget_color, widget, prop, start_color, end_color, steps, current_step + 1, delay)
     except:
-        pass # Widget might be destroyed
+        pass 
 
 def animate_grid_pady(widget, base_top, base_bottom, lift_amount, steps=10, current_step=0, delay=16, direction="up"):
     if current_step > steps:
         return
         
     t = current_step / steps
-    factor = 1 - pow(1 - t, 3) # ease-out
+    factor = 1 - pow(1 - t, 3) 
     
     shift = int(lift_amount * factor)
     
