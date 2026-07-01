@@ -11,7 +11,7 @@ build/
 *.png
 odm_mozaik.log
 .git/
-assets/
+assets/**
 !assets/
 !assets/icons/
-!assets/icons/**
+!assets/icons/*.png

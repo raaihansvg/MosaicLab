@@ -1,4 +1,5 @@
 import sys
+import glob
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 
@@ -7,6 +8,7 @@ datas_matplotlib, binaries_matplotlib, hiddenimports_matplotlib = collect_all('m
 datas_PIL,        binaries_PIL,        hiddenimports_PIL        = collect_all('PIL')
 datas_pandas,     binaries_pandas,     hiddenimports_pandas     = collect_all('pandas')
 datas_numpy,      binaries_numpy,      hiddenimports_numpy      = collect_all('numpy')
+datas_assets = [(path, 'assets/icons') for path in glob.glob('assets/icons/*.png')]
 
 all_datas = (
     datas_sklearn
@@ -14,7 +16,7 @@ all_datas = (
     + datas_PIL
     + datas_pandas
     + datas_numpy
-    + [('assets', 'assets')]
+    + datas_assets
 )
 
 all_binaries = (
