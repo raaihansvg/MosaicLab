@@ -102,59 +102,39 @@ def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
     IDX    = {k: i for i, k in enumerate(WARNA_KEYS)}
     result = np.full(n, -1, dtype=np.int32)
 
-    # 1. Gelap -> hitam (V < 0.40 menangkap shadow, JPEG noise, dark-bg)
+
     result[v < 0.40] = IDX["hitam"]
 
-    # 2. Terang & tidak jenuh -> putih
-    # V > 0.72 (turun dari 0.78) — piksel krem/ivory (gigi Lego, area off-white)
-    # punya V antara 0.72–0.78 yang sebelumnya lolos ke rule kuning/fallback.
-    # S < 0.40 tetap — menangkap gading/krem dengan S~0.20–0.39 tanpa
-    # mengganggu kuning murni (S >= 0.50+).
+
     mask = (result == -1) & (v > 0.72) & (s < 0.40)
     result[mask] = IDX["putih"]
 
-    # 3. Abu-abu (rendah saturasi) - split di 0.55
-    # S < 0.22 (naik dari 0.18) — piksel abu-krem hangat (S~0.19–0.21)
-    # yang merupakan artefak anti-alias/JPEG seharusnya masuk abu-abu,
-    # bukan lolos ke rule kuning (S >= 0.25).
+
     mask = (result == -1) & (s < 0.22)
     result[mask & (v <= 0.55)] = IDX["hitam"]
     result[mask & (v >  0.55)] = IDX["putih"]
 
-    # 4. Oranye — harus cerah dan jenuh (bukan cokelat-gelap)
+
     mask = (result == -1) & (h >= 8) & (h < 35) & (s >= 0.55) & (v >= 0.50)
     result[mask] = IDX["oren"]
 
-    # 5. Kuning / emas — S rendah karena LANCZOS blending di tepi ring
+
     mask = (result == -1) & (h >= 35) & (h < 80) & (s >= 0.25) & (v >= 0.42)
     result[mask] = IDX["kuning"]
 
-    # 6. Biru — harus cerah dan jenuh (bukan dark-blue background app)
+
     mask = (result == -1) & (h >= 180) & (h < 270) & (s >= 0.50) & (v >= 0.50)
     result[mask] = IDX["biru"]
 
-    # 7. Merah — hue murni, harus cerah dan jenuh
+
     mask = (result == -1) & ((h < 8) | (h >= 315)) & (s >= 0.55) & (v >= 0.50)
     result[mask] = IDX["merah"]
 
-    # 8. Magenta/ungu -> merah (hanya jika cerah dan jenuh)
+
     mask = (result == -1) & (h >= 270) & (h < 315) & (s >= 0.55) & (v >= 0.50)
     result[mask] = IDX["merah"]
 
-    # 9. Fallback Euclidean V-aware + S-aware:
-    #
-    #    Masalah Euclidean naif:
-    #    • Piksel cokelat-gelap (V<0.55, H≈15°) → Euclidean paling dekat ke MERAH
-    #      padahal seharusnya HITAM (ini shadow/border gelap, bukan merah sejati)
-    #    • Piksel krem-abu terang (V>0.50, S<0.40) → Euclidean paling dekat ke OREN/KUNING
-    #      padahal seharusnya PUTIH (ini off-white, bukan warna kromat)
-    #
-    #    Solusi dua-aturan override:
-    #    A) Jika V < 0.55 dan best=kromat dan dist_hitam < 2.0× dist_kromat → HITAM
-    #       (piksel gelap yang sedikit berwarna → hitam lebih masuk akal)
-    #    B) Jika V >= 0.50 dan S < 0.50 dan best=kromat dan dist_putih < 2.5× dist_kromat → PUTIH
-    #       (piksel abu/krem/pink-pucat terang yang sedikit berwarna → putih lebih masuk akal)
-    #       S < 0.50 (bukan 0.40) untuk menangkap pink/salmon (S≈0.41-0.48) dari anti-alias
+
     unresolved = result == -1
     if unresolved.any():
         px_u  = rgb_array[unresolved].astype(np.float32)
@@ -172,12 +152,11 @@ def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
                 d_hitam  = dist[pi, IDX["hitam"]]
                 d_putih  = dist[pi, IDX["putih"]]
 
-                # Aturan A: piksel gelap-sedikit-berwarna → hitam
+
                 if v_u[pi] < 0.55 and d_hitam < 2.0 * d_chroma:
                     final_best[pi] = IDX["hitam"]
-                # Aturan B: piksel terang-rendah-saturasi → putih
-                # S < 0.50 (bukan 0.40) menangkap pink/salmon terang (S≈0.41-0.48)
-                # yang berasal dari anti-alias atau elemen UI, bukan merah/oren sejati
+
+
                 elif v_u[pi] >= 0.50 and s_u[pi] < 0.50 and d_putih < 2.5 * d_chroma:
                     final_best[pi] = IDX["putih"]
 
@@ -187,62 +166,24 @@ def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
 
 
 def preprocess_image_for_grid(img_array: np.ndarray) -> np.ndarray:
-    """
-    Pipeline pra-proses v2 — dioptimalkan untuk garis/teks tipis (outline logo,
-    tulisan melingkar) yang hilang di pipeline v1.
-
-    MASALAH PIPELINE LAMA (v1):
-    Source image untuk logo biasanya kecil (contoh: ~420x450px), sehingga 1 sel
-    grid 60x60 setara ±7x7px di source. Teks tipis (tinggi huruf ~15-20px source)
-    jadi sisa <3 sel grid. Pipeline v1 (resize 240 -> Gaussian blur 0.8 -> LANCZOS
-    60) melebur strip tipis itu jadi abu-abu "ambigu" yang nilai V-nya nyebrang
-    bolak-balik di sekitar threshold hitam/putih (V<0.40) -> hasilnya noise titik
-    putih acak di tengah area hitam, bukan pola teks yang konsisten.
-
-    PERBAIKAN (v2):
-    1. Resize ke intermediate LEBIH TINGGI (500x500, bukan 240) — strip tipis
-       bertahan lebih lama sebelum direduksi ke grid akhir.
-    2. UnsharpMask (bukan Gaussian blur) sebelum downscale — mendorong tepi/garis
-       supaya kontras lokalnya naik, bukan luntur jadi abu-abu rata.
-    3. Downscale akhir pakai BOX filter (true area-averaging, ringing lebih
-       rendah dari LANCZOS untuk tepi tajam pasca-sharpen).
-
-    CATATAN — global contrast stretch (pernah ada di v2 awal) SUDAH DIHAPUS:
-    Terbukti merusak gambar dengan gradien halus (mis. shading permukaan glossy
-    pada formasi Lego) — piksel kuning yang sedikit lebih gelap akibat shading
-    natural dipaksa makin jenuh sampai nyebrang ke kategori "oren", padahal
-    warna aslinya cuma variasi pencahayaan, bukan oren sungguhan. Validasi
-    menunjukkan oren melonjak dari 7px jadi 173px HANYA karena stretch ini,
-    pada gambar yang sama. Tanpa stretch, perbaikan outline/teks pada logo
-    Undip tetap bertahan — jadi step ini ternyata tidak esensial dan dihapus.
-
-    CATATAN PENTING (limit fundamental, bukan bug):
-    Teks melingkar kecil (mis. "UNIVERSITAS DIPONEGORO") secara fisik nggak akan
-    pernah terbaca sebagai huruf di grid 60x60 kalau source-nya kecil — itu hard
-    limit resolusi/informasi yang hilang saat downscale, bukan sesuatu yang bisa
-    diperbaiki algoritma apapun. Yang pipeline ini perbaiki adalah konsistensi
-    pola (outline solid, distribusi piksel rapi) bukan keterbacaan teks mikro.
-    """
     from PIL import ImageFilter
-    INTER_SIZE = 500  # resolusi menengah tinggi agar garis tipis bertahan lebih lama
+    INTER_SIZE = 500
 
     pil_img = Image.fromarray(img_array)
 
-    # Step 1: Resize ke ukuran menengah (tinggi) dengan LANCZOS
+
     mid = pil_img.resize((INTER_SIZE, INTER_SIZE), Image.LANCZOS)
 
-    # Step 2: Unsharp mask — menguatkan tepi/garis tipis sebelum direduksi,
-    # alih-alih Gaussian blur yang melunturkannya jadi abu-abu rata
+
     mid = mid.filter(ImageFilter.UnsharpMask(radius=2, percent=250, threshold=2))
 
-    # Step 3: Downscale ke grid final dengan BOX (area-averaging murni)
+
     final = mid.resize((GRID_SIZE, GRID_SIZE), Image.BOX)
 
     return np.array(final)
 
 
 def map_to_predefined_colors(img_array: np.ndarray) -> np.ndarray:
-    """Mapping piksel 60x60 langsung ke 6 warna predefined via HSV."""
     pixels = img_array.reshape(-1, 3)
     color_indices = map_pixel_to_color_hsv(pixels)
     return color_indices.reshape(GRID_SIZE, GRID_SIZE)
@@ -250,8 +191,8 @@ def map_to_predefined_colors(img_array: np.ndarray) -> np.ndarray:
 
 def process_formation_image(uploaded_file) -> dict:
     raw        = load_image(uploaded_file)
-    # Pipeline baru: pra-proses resolusi menengah -> langsung HSV mapping
-    # (menggantikan: resize 60x60 -> KMeans -> HSV yang tidak akurat)
+
+
     preprocessed = preprocess_image_for_grid(raw)
     color_grid   = map_to_predefined_colors(preprocessed)
 
@@ -269,10 +210,6 @@ def process_formation_image(uploaded_file) -> dict:
         "distribution": distribution,
     }
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# VISUALIZATION  (returns Figure only)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def render_grid_preview(
     formation_data: dict,
@@ -312,10 +249,6 @@ def render_grid_preview(
     plt.tight_layout(pad=2)
     return fig
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# DATA / EXPORT  (unchanged logic)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def generate_participant_base() -> pd.DataFrame:
     rows, cols = [], []
@@ -463,7 +396,7 @@ def export_to_excel(df: pd.DataFrame, formations_data: list) -> bytes:
     for r in range(3, len(df) + 3):
         ws.row_dimensions[r].height = 14
 
-    # ── Sheet 2: Ringkasan Distribusi ─────────────────────────────────────
+
     ws2 = wb.create_sheet("Ringkasan Distribusi")
 
     ws2["A1"] = "Ringkasan Distribusi Warna per Formasi"
@@ -538,12 +471,6 @@ def export_to_excel(df: pd.DataFrame, formations_data: list) -> bytes:
     return buf.getvalue()
 
 
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TKINTER UI  (redesigned — warm adventure theme)
-# ─────────────────────────────────────────────────────────────────────────────
-
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 
 class ODMApp(tk.Tk):
@@ -597,7 +524,7 @@ class ODMApp(tk.Tk):
         self._build_sidebar()
         self._build_main()
 
-    # ── SIDEBAR ───────────────────────────────────────────────────────────
+
     def _build_sidebar(self):
         sb = tk.Frame(self, bg=BG_SIDEBAR, width=280)
         sb.grid(row=0, column=0, sticky="nsew")
@@ -605,7 +532,7 @@ class ODMApp(tk.Tk):
         sb.columnconfigure(0, weight=1)
         sb.rowconfigure(1, weight=1)
 
-        # Header
+
         hdr = tk.Frame(sb, bg=BG_SIDEBAR)
         hdr.pack(fill="x", padx=20, pady=(20, 0))
         tk.Label(hdr, text="ODM Undip 2026", bg=BG_SIDEBAR, fg=TEXT_INVERSE,
@@ -613,14 +540,14 @@ class ODMApp(tk.Tk):
         tk.Label(hdr, text="Mozaik Formation Software", bg=BG_SIDEBAR, fg=TEXT_MUTED,
                  font=("Segoe UI", 10)).pack(anchor="w")
 
-        # Divider
+
         tk.Frame(sb, bg="#292524", height=1).pack(fill="x", padx=16, pady=12)
 
-        # Upload section title
+
         tk.Label(sb, text="Gambar Formasi", bg=BG_SIDEBAR, fg=TEXT_INVERSE,
                  font=("Segoe UI", 11, "bold")).pack(padx=20, anchor="w")
 
-        # Scrollable slot area
+
         slot_canvas = tk.Canvas(sb, bg=BG_SIDEBAR, bd=0, highlightthickness=0)
         slot_scroll = ttk.Scrollbar(sb, orient="vertical", command=slot_canvas.yview)
         slot_canvas.configure(yscrollcommand=slot_scroll.set)
@@ -648,24 +575,24 @@ class ODMApp(tk.Tk):
             row = tk.Frame(container, bg=BG_SIDEBAR)
             row.pack(fill="x")
 
-            # F01 label
+
             tk.Label(row, text=f"F{i:02d}", bg=BG_SIDEBAR, fg=TEXT_MUTED,
                      font=("Segoe UI", 9), width=4, anchor="w").pack(side="left")
 
-            # Filename (clickable)
+
             fl = tk.Label(row, text="Belum diunggah", bg=BG_SIDEBAR, fg="#A8A29E",
                           font=("Segoe UI", 9), anchor="w", cursor="hand2")
             fl.pack(side="left", fill="x", expand=True)
             fl.bind("<Button-1>", lambda e, idx=i: self._pick_image(idx))
             self._slot_fname_labels[i] = fl
 
-            # Status dot
+
             dot = tk.Canvas(row, width=12, height=12, bg=BG_SIDEBAR, highlightthickness=0)
             dot.create_oval(2, 2, 10, 10, fill=BORDER, outline="", tags="dot")
             dot.pack(side="left", padx=4)
             self._slot_dots[i] = dot
 
-            # X button
+
             xb = tk.Label(row, text="X", bg=BG_SIDEBAR, fg="#57534E",
                           font=("Segoe UI", 8), cursor="hand2", padx=4)
             xb.pack(side="left")
@@ -674,25 +601,25 @@ class ODMApp(tk.Tk):
             xb.bind("<Leave>", lambda e, w=xb: w.config(fg="#57534E"))
             self._slot_x_btns[i] = xb
 
-            # Error label
+
             err = tk.Label(container, text="", bg=BG_SIDEBAR, fg=CLR_ERROR,
                            font=("Segoe UI", 8), anchor="w")
             self._slot_err_labels[i] = err
 
-        # Upload count
+
         self._upload_count_lbl = tk.Label(sb, text="0 / 10 diunggah",
                                           bg=BG_SIDEBAR, fg=TEXT_MUTED,
                                           font=("Segoe UI", 9))
         self._upload_count_lbl.pack(padx=20, pady=(6, 0), anchor="w")
 
-        # Divider
+
         tk.Frame(sb, bg="#292524", height=1).pack(fill="x", padx=16, pady=10)
 
-        # Settings
+
         tk.Label(sb, text="Pengaturan", bg=BG_SIDEBAR, fg=TEXT_INVERSE,
                  font=("Segoe UI", 11, "bold")).pack(padx=20, anchor="w")
 
-        # Toggle for grid lines
+
         tog_row = tk.Frame(sb, bg=BG_SIDEBAR)
         tog_row.pack(fill="x", padx=20, pady=6)
         tk.Label(tog_row, text="Garis grid", bg=BG_SIDEBAR, fg="#D6D3D1",
@@ -700,7 +627,7 @@ class ODMApp(tk.Tk):
         self._toggle_canvas = self._create_toggle(tog_row, self.show_grid_var)
         self._toggle_canvas.pack(side="right")
 
-        # Background color dropdown
+
         tk.Label(sb, text="Warna background", bg=BG_SIDEBAR, fg="#D6D3D1",
                  font=("Segoe UI", 10)).pack(padx=20, anchor="w", pady=(4, 2))
         bg_opts = {v["label"]: k for k, v in WARNA_DEFINISI.items() if k in BACKGROUND_COLORS}
@@ -710,13 +637,13 @@ class ODMApp(tk.Tk):
                              values=list(bg_opts.keys()), state="readonly", width=16)
         combo.pack(padx=20, anchor="w")
 
-        # Tooltip label
+
         self._process_tip = tk.Label(sb, text="Upload minimal 1 gambar untuk memulai.",
                                      bg=BG_SIDEBAR, fg=TEXT_MUTED, font=("Segoe UI", 8),
                                      wraplength=240)
         self._process_tip.pack(padx=20, pady=(12, 2), anchor="w")
 
-        # Process button
+
         self._process_btn = tk.Label(sb, text="Proses Semua Gambar",
                                      bg=PRIMARY, fg=TEXT_INVERSE,
                                      font=("Segoe UI", 12, "bold"),
@@ -748,14 +675,13 @@ class ODMApp(tk.Tk):
         return c
 
 
-    # ── MAIN PANEL ────────────────────────────────────────────────────────
     def _build_main(self):
         main = tk.Frame(self, bg=BG_BASE)
         main.grid(row=0, column=1, sticky="nsew")
         main.columnconfigure(0, weight=1)
         main.rowconfigure(1, weight=1)
 
-        # Top bar
+
         topbar = tk.Frame(main, bg=BG_SURFACE, height=44)
         topbar.grid(row=0, column=0, sticky="ew")
         topbar.grid_propagate(False)
@@ -766,7 +692,7 @@ class ODMApp(tk.Tk):
                  bg=BG_SURFACE, fg=TEXT_MUTED, font=("Segoe UI", 10)).pack(side="right", padx=20)
         tk.Frame(topbar, bg=BORDER, height=1).place(relx=0, rely=1.0, relwidth=1.0, anchor="sw")
 
-        # Scrollable content
+
         outer = tk.Frame(main, bg=BG_BASE)
         outer.grid(row=1, column=0, sticky="nsew")
         outer.columnconfigure(0, weight=1)
@@ -795,17 +721,17 @@ class ODMApp(tk.Tk):
     def _build_content_area(self):
         c = self._content
 
-        # ── Metrics row ──────────────────────────────────────────────────
+
         self._metrics_frame = tk.Frame(c, bg=BG_BASE)
         self._metrics_frame.pack(fill="x", padx=24, pady=(16, 8))
         self._build_metrics()
 
-        # ── Step indicator ───────────────────────────────────────────────
+
         self._step_frame = tk.Frame(c, bg=BG_BASE)
         self._step_frame.pack(fill="x", padx=24, pady=8)
         self._build_step_indicator()
 
-        # ── Processing progress (hidden) ─────────────────────────────────
+
         self._proc_frame = tk.Frame(c, bg=BG_BASE)
         self._proc_label = tk.Label(self._proc_frame, text="", bg=BG_BASE, fg=TEXT_MUTED,
                                     font=("Segoe UI", 10))
@@ -815,7 +741,7 @@ class ODMApp(tk.Tk):
         self._proc_bar_canvas.pack(fill="x", pady=(4, 0))
         self._proc_bar_fill = None
 
-        # ── Tab row ──────────────────────────────────────────────────────
+
         tk.Label(c, text="Preview Formasi", bg=BG_BASE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 13, "bold")).pack(padx=24, pady=(12, 4), anchor="w")
 
@@ -825,19 +751,19 @@ class ODMApp(tk.Tk):
         self._tab_indicators = {}
         self._build_tab_row()
 
-        # ── Formation content area ───────────────────────────────────────
+
         self._formation_frame = tk.Frame(c, bg=BG_BASE)
         self._formation_frame.pack(fill="both", expand=True, padx=24, pady=(0, 8))
         self._show_empty_state()
 
-        # ── Distribution summary ─────────────────────────────────────────
+
         tk.Label(c, text="Ringkasan Distribusi Warna", bg=BG_BASE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 13, "bold")).pack(padx=24, pady=(8, 4), anchor="w")
         self._dist_frame = tk.Frame(c, bg=BG_BASE)
         self._dist_frame.pack(fill="x", padx=24, pady=(0, 8))
         self._dist_tree = None
 
-        # ── Export section ───────────────────────────────────────────────
+
         exp_card = tk.Frame(c, bg=BG_SURFACE, highlightbackground=BORDER, highlightthickness=1)
         exp_card.pack(fill="x", padx=24, pady=8)
 
@@ -851,7 +777,7 @@ class ODMApp(tk.Tk):
         btn_row = tk.Frame(exp_card, bg=BG_SURFACE)
         btn_row.pack(padx=16, pady=8, anchor="w")
 
-        # Generate button (outline)
+
         self._gen_btn = tk.Label(btn_row, text="Generate Excel", bg=BG_SURFACE,
                                  fg=PRIMARY, font=("Segoe UI", 10, "bold"),
                                  cursor="hand2", padx=16, pady=6,
@@ -861,7 +787,7 @@ class ODMApp(tk.Tk):
         self._gen_btn.bind("<Enter>", lambda e: self._gen_btn.config(bg="#FFF7ED"))
         self._gen_btn.bind("<Leave>", lambda e: self._gen_btn.config(bg=BG_SURFACE))
 
-        # Download button (filled, disabled)
+
         self._dl_btn = tk.Label(btn_row, text="Unduh File Excel", bg="#D6D3D1",
                                 fg=BG_SURFACE, font=("Segoe UI", 10, "bold"),
                                 padx=16, pady=6)
@@ -872,7 +798,7 @@ class ODMApp(tk.Tk):
                                       font=("Segoe UI", 9))
         self._excel_status.pack(padx=16, pady=(0, 12), anchor="w")
 
-        # ── Data preview ─────────────────────────────────────────────────
+
         tk.Label(c, text="Pratinjau 10 baris pertama", bg=BG_BASE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 13, "bold")).pack(padx=24, pady=(8, 4), anchor="w")
         self._preview_frame = tk.Frame(c, bg=BG_BASE)
@@ -976,7 +902,7 @@ class ODMApp(tk.Tk):
         self._formation_frame.columnconfigure(1, weight=1)
         self._formation_frame.rowconfigure(0, weight=1)
 
-        # LEFT panel (30%)
+
         left = tk.Frame(self._formation_frame, bg=BG_SURFACE, highlightbackground=BORDER,
                         highlightthickness=1, width=260)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
@@ -999,7 +925,7 @@ class ODMApp(tk.Tk):
             tk.Label(thumb_frame, text="[Tidak tersedia]", bg=BG_SURFACE, fg=TEXT_MUTED,
                      font=("Segoe UI", 9)).pack(padx=8, pady=8)
 
-        # Distribution bars
+
         tk.Label(left, text="Distribusi Warna", bg=BG_SURFACE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 11, "bold")).pack(padx=12, pady=(12, 4), anchor="w")
         total = sum(fdata["distribution"].values())
@@ -1020,7 +946,7 @@ class ODMApp(tk.Tk):
             tk.Label(rf, text=f"{cnt} ({pct:.1f}%)", bg=BG_SURFACE, fg=TEXT_MUTED,
                      font=("Segoe UI", 8)).pack(side="left")
 
-        # RIGHT panel (70%) - grid preview
+
         right = tk.Frame(self._formation_frame, bg=BG_BASE)
         right.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=4)
         right.columnconfigure(0, weight=1)
@@ -1036,9 +962,9 @@ class ODMApp(tk.Tk):
         self._canvas_refs[fi] = canvas
         plt.close(fig)
 
-    # ── Upload handling ───────────────────────────────────────────────────
+
     def _pick_image(self, idx):
-        # Confirm if already processed
+
         if idx in self.formations_data:
             proceed = messagebox.askyesno("Konfirmasi",
                 "Formasi ini sudah diproses. Upload gambar baru "
@@ -1052,7 +978,7 @@ class ODMApp(tk.Tk):
         if not path:
             return
 
-        # File validation
+
         import os
         ext = os.path.splitext(path)[1].lower()
         if ext not in ALLOWED_EXT:
@@ -1060,11 +986,11 @@ class ODMApp(tk.Tk):
             self._slot_err_labels[idx].pack(fill="x", pady=(1, 0))
             return
 
-        # Clear error
+
         self._slot_err_labels[idx].config(text="")
         self._slot_err_labels[idx].pack_forget()
 
-        # Remove old processed data if exists
+
         if idx in self.formations_data:
             del self.formations_data[idx]
 
@@ -1106,7 +1032,7 @@ class ODMApp(tk.Tk):
                 color = BORDER
             dot.create_oval(2, 2, 10, 10, fill=color, outline="", tags="dot")
 
-        # Process button state
+
         if n > 0:
             self._process_btn.config(bg=PRIMARY, cursor="hand2")
             self._process_tip.config(text="")
@@ -1116,7 +1042,7 @@ class ODMApp(tk.Tk):
 
         self._build_step_indicator()
 
-    # ── Processing ────────────────────────────────────────────────────────
+
     def _start_processing(self):
         if not self.uploaded_paths:
             return
@@ -1178,11 +1104,11 @@ class ODMApp(tk.Tk):
         self._dl_btn_enabled = False
         self._excel_status.config(text="")
 
-        # Auto-switch to last processed tab
+
         last = max(self.formations_data.keys())
         self._select_tab(last)
 
-    # ── Distribution table ────────────────────────────────────────────────
+
     def _rebuild_dist_table(self):
         for w in self._dist_frame.winfo_children():
             w.destroy()
@@ -1214,7 +1140,7 @@ class ODMApp(tk.Tk):
         xsb.pack(fill="x", side="top")
         self._dist_tree = tree
 
-    # ── Excel export ──────────────────────────────────────────────────────
+
     def _generate_excel(self):
         if not self.formations_data:
             messagebox.showwarning("Peringatan",
@@ -1280,7 +1206,7 @@ class ODMApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error", f"Gagal menyimpan file:\n{e}")
 
-    # ── Data preview ──────────────────────────────────────────────────────
+
     def _rebuild_preview_table(self):
         for w in self._preview_frame.winfo_children():
             w.destroy()
@@ -1312,10 +1238,6 @@ class ODMApp(tk.Tk):
         frame.rowconfigure(0, weight=1)
         self._preview_tree = tree
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ENTRY POINT
-# ─────────────────────────────────────────────────────────────────────────────
 
 def main():
     app = ODMApp()
