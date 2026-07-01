@@ -1,12 +1,3 @@
-"""
-ODM Undip 2026 - Mozaik Formation Software
-Aplikasi desktop (tkinter) untuk mengkonversi gambar menjadi grid formasi peserta mozaik.
-
-Grid: 60x60 = 3.600 peserta
-Warna: 6 (hitam, putih, oren, merah, kuning, biru)
-Formasi: 10
-"""
-
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import numpy as np
@@ -25,10 +16,6 @@ import threading
 import warnings
 
 warnings.filterwarnings("ignore")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTS & CONFIG
-# ─────────────────────────────────────────────────────────────────────────────
 
 GRID_SIZE    = 60
 N_COLORS     = 6
@@ -57,7 +44,6 @@ EXCEL_FILLS = {
     "biru":   "FF1E90FF",
 }
 
-# ── Theme colours (ODM Undip 2026 — warm adventure) ───────────────────────────
 PRIMARY      = "#E8621A"
 PRIMARY_DARK = "#C4511A"
 SECONDARY    = "#F5A623"
@@ -72,11 +58,6 @@ CLR_SUCCESS  = "#16A34A"
 CLR_WARNING  = "#D97706"
 CLR_ERROR    = "#DC2626"
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# IMAGE PROCESSING  (unchanged logic)
-# ─────────────────────────────────────────────────────────────────────────────
-
 def load_image(uploaded_file) -> np.ndarray:
     try:
         img = Image.open(uploaded_file).convert("RGB")
@@ -86,21 +67,12 @@ def load_image(uploaded_file) -> np.ndarray:
 
 
 def resize_to_grid(img_array: np.ndarray, size: int = GRID_SIZE) -> np.ndarray:
-    """
-    Resize gambar ke ukuran target menggunakan LANCZOS.
-    Resize ke ukuran menengah (INTER_SIZE) sebelum ke grid akhir
-    untuk menjaga kualitas downsampling.
-    """
     pil_img = Image.fromarray(img_array)
     resized  = pil_img.resize((size, size), Image.LANCZOS)
     return np.array(resized)
 
 
 def _pixels_to_hsv(rgb_array: np.ndarray) -> np.ndarray:
-    """
-    Konversi array piksel RGB uint8 (N,3) ke HSV float32 (N,3).
-    H: 0-360, S: 0-1, V: 0-1  — vectorized, tanpa library tambahan.
-    """
     rgb  = rgb_array.astype(np.float32) / 255.0
     r, g, b = rgb[:, 0], rgb[:, 1], rgb[:, 2]
     cmax  = np.maximum(np.maximum(r, g), b)
@@ -123,50 +95,6 @@ def _pixels_to_hsv(rgb_array: np.ndarray) -> np.ndarray:
 
 
 def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
-    """
-    Memetakan setiap piksel ke salah satu dari 6 warna menggunakan
-    aturan HSV deterministik yang dikalibrasi secara empiris.
-
-    Kalibrasi berdasarkan analisis piksel nyata logo Undip dan gambar formasi umum:
-
-    MASALAH YANG DIPERBAIKI vs versi sebelumnya:
-    ─────────────────────────────────────────────
-    A. V < 0.40 untuk hitam (bukan 0.30):
-       Piksel gelap dari JPEG-compression, shadow, dan background gelap (H≈207°)
-       memiliki V hingga ~0.39. Threshold 0.30 terlalu rendah sehingga banyak
-       piksel gelap lolos dan jatuh ke rule "biru" (H≈207°, S≈0.40).
-
-    B. Oranye harus TERANG (V >= 0.50) dan SANGAT JENUH (S >= 0.55):
-       Piksel cokelat-hangat gelap (H≈20°, V≈0.46, S≈0.47) bukan "oren" —
-       ini shadow/border dari logo. Hanya oranye cerah yang genuine.
-
-    C. Kuning: S >= 0.25 (bukan 0.50):
-       Warna emas/golden pada logo memiliki S serendah 0.25 setelah LANCZOS downscale.
-       Threshold tinggi memotong tepi ring emas yang penting.
-
-    D. Biru harus CERAH (V >= 0.50) dan SANGAT JENUH (S >= 0.50):
-       Background app #1a1a2e (H≈207°) yang V=0.30–0.44 sudah ditangkap rule hitam.
-       Sisa biru-gelap dengan V=0.44–0.49 ditangkap dengan constraint V >= 0.50.
-
-    E. Merah harus cerah (V >= 0.50) dan jenuh (S >= 0.55):
-       Piksel merah-gelap-kecokelatan (V≈0.45, H≈15°) bukan merah sejati.
-
-    F. Euclidean fallback yang sadar kecerahan:
-       Piksel gelap (V < 0.55) yang Euclidean-nya paling dekat ke warna kromat
-       (merah/oren/kuning/biru) NAMUN jarak ke hitam < 2× jarak kromat terdekat
-       → dipaksa ke hitam. Ini mencegah piksel cokelat-gelap diklasifikasi merah.
-
-    Urutan aturan (first-match):
-      1. V < 0.40                              -> hitam
-      2. V > 0.72 AND S < 0.40               -> putih
-      3. S < 0.22 (abu-abu)                   -> hitam (V<=0.55) / putih (V>0.55)
-      4. H [8-35)   AND S >= 0.55 AND V>=0.50 -> oren
-      5. H [35-80)  AND S >= 0.25 AND V>=0.42 -> kuning
-      6. H [180-270) AND S >= 0.50 AND V>=0.50-> biru
-      7. H [0-8) or [315-360) AND S>=0.55 AND V>=0.50 -> merah
-      8. H [270-315) AND S >= 0.55 AND V>=0.50-> merah
-      9. Fallback Euclidean V-aware + S-aware (lihat komentar inline)
-    """
     hsv     = _pixels_to_hsv(rgb_array)
     h, s, v = hsv[:, 0], hsv[:, 1], hsv[:, 2]
     n       = len(h)
