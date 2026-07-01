@@ -208,12 +208,6 @@ Handles participant dataframe generation and Excel export using OpenPyXL, includ
 
 Main application window module. It manages image upload, drag and drop, formation slot switching, image processing, grid preview, and Excel export.
 
-## Asset Notes
-
-The `assets/icons` folder is used for application interface icons. PNG files are required at runtime and are included in the PyInstaller build.
-
-SVG files may be kept locally for design purposes, but they do not need to be tracked in the repository if the application does not use them directly.
-
 ## License
 
 This project is licensed for internal use within the ODM Undip 2026 Mosaic Formation project. See the [LICENSE](LICENSE) file for details.
