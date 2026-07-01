@@ -1,17 +1,7 @@
-# build.spec
-# PyInstaller spec file for ODM Undip 2026 - Mozaik Formation Software
-#
-# Usage:
-#   pyinstaller build.spec
-#
-# To add a custom icon, place your .ico file in the same directory and
-# replace None below with:
-#   icon='odm_icon.ico'
-
 import sys
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
-# ── Collect data/binaries for packages that need them ────────────────────────
+
 datas_sklearn,    binaries_sklearn,    hiddenimports_sklearn    = collect_all('sklearn')
 datas_matplotlib, binaries_matplotlib, hiddenimports_matplotlib = collect_all('matplotlib')
 datas_PIL,        binaries_PIL,        hiddenimports_PIL        = collect_all('PIL')
@@ -34,7 +24,6 @@ all_binaries = (
     + binaries_numpy
 )
 
-# ── Hidden imports (libraries that PyInstaller misses via static analysis) ───
 hidden = (
     hiddenimports_sklearn
     + hiddenimports_matplotlib
