@@ -100,7 +100,7 @@ hidden = (
 # Analysis
 # ─────────────────────────────────────────────────────────────────────────────
 a = Analysis(
-    ['app.py'],
+    ['main.py'],
     pathex=[],
     binaries=all_binaries,
     datas=all_datas,

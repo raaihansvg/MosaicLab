@@ -2,7 +2,7 @@ import customtkinter as ctk
 import tkinter as tk
 from ..components.cards import MetricCard
 from ..theme import BG_BASE, BG_SURFACE, PRIMARY, PRIMARY_HOVER, TEXT_MUTED, TEXT_PRIMARY, get_icon
-from core.constants import N_FORMATIONS
+from core.konstanta import N_FORMATIONS
 from ..utils import animate_widget_color, animate_grid_pady
 class Dashboard(ctk.CTkScrollableFrame):
     def __init__(self, master, app_controller, **kwargs):

@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from ..theme import BG_SIDEBAR, PRIMARY, get_icon, TEXT_MUTED, TEXT_PRIMARY, get_font
-from core.constants import N_FORMATIONS
+from core.konstanta import N_FORMATIONS
 
 class Sidebar(ctk.CTkFrame):
     def __init__(self, master, app_controller, **kwargs):

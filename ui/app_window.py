@@ -14,8 +14,8 @@ from .views.sidebar import Sidebar
 from .views.canvas import CanvasArea
 from .views.inspector import Inspector
 from .components.toast import show_toast
-from core.image_processing import process_formation_image
-from core.excel_export import build_participant_dataframe, export_to_excel
+from core.pemrosesan_gambar import process_formation_image
+from core.ekspor_excel import build_participant_dataframe, export_to_excel
 
 class AppWindow(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self):

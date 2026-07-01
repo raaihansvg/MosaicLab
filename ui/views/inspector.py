@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from ..components.cards import MetricCard, AnimatedButton
 from ..theme import BG_BASE, PRIMARY, PRIMARY_HOVER, TEXT_MUTED, TEXT_PRIMARY, BORDER, get_font, get_icon
-from core.constants import N_FORMATIONS, WARNA_DEFINISI
+from core.konstanta import N_FORMATIONS, WARNA_DEFINISI
 
 class Inspector(ctk.CTkScrollableFrame):
     def __init__(self, master, app_controller, **kwargs):
