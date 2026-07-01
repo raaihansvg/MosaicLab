@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.agents/
+*.log
+dist/
+build/
+*.jpeg
+*.jpg
+*.png
+odm_mozaik.log
+.git/
