@@ -11,3 +11,4 @@ build/
 *.png
 odm_mozaik.log
 .git/
+assets/
