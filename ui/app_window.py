@@ -48,9 +48,9 @@ class AppWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         self.canvas_area.show_placeholder()
 
     def _build_layout(self):
-        self.grid_columnconfigure(0, weight=0, minsize=240) # Sidebar
-        self.grid_columnconfigure(1, weight=1)              # Canvas Area
-        self.grid_columnconfigure(2, weight=0, minsize=320) # Inspector
+        self.grid_columnconfigure(0, weight=0, minsize=240) 
+        self.grid_columnconfigure(1, weight=1)              
+        self.grid_columnconfigure(2, weight=0, minsize=320) 
         self.grid_rowconfigure(0, weight=1)
         
         self.sidebar = Sidebar(self, self)
@@ -243,7 +243,6 @@ class AppWindow(ctk.CTk, TkinterDnD.DnDWrapper):
             
         try:
             pil_img = Image.open(path)
-            # Adjust thumbnail logic so it looks good in the split view container
             pil_img.thumbnail((600, 600), Image.LANCZOS)
             ctk_img = ctk.CTkImage(light_image=pil_img, size=pil_img.size)
             self._photo_refs[index] = ctk_img
@@ -303,7 +302,6 @@ class AppWindow(ctk.CTk, TkinterDnD.DnDWrapper):
         plt.tight_layout(pad=1)
         return fig
 
-    # Canvas floating toolbar hooks
     def zoom_grid(self, factor):
         if self._canvas_ref:
             ax = self._canvas_ref.figure.axes[0]

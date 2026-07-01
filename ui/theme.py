@@ -20,7 +20,6 @@ CLR_ERROR = "#FF3B30"
 
 def get_font(type="body"):
     """Returns the appropriate font tuple matching Apple's hierarchy."""
-    # Use fallback sequence for cross-platform
     family_display = "SF Pro Display" if platform.system() == "Darwin" else "Inter"
     family_text = "SF Pro Text" if platform.system() == "Darwin" else "Inter"
     
@@ -43,9 +42,6 @@ def setup_theme():
     ctk.set_default_color_theme("blue")
 
 def get_icon(name, size=20, dark_mode=False):
-    """Loads a Lucide icon from the assets directory."""
-    # Wait, the previous implementation used light_image and dark_image simultaneously.
-    # Let's keep that to avoid issues with appearance mode changes, even though we force Light mode.
     light_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icons", f"{name}_light.png")
     dark_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icons", f"{name}_dark.png")
     
