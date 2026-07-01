@@ -101,39 +101,28 @@ def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
 
     IDX    = {k: i for i, k in enumerate(WARNA_KEYS)}
     result = np.full(n, -1, dtype=np.int32)
-
-
     result[v < 0.40] = IDX["hitam"]
-
-
     mask = (result == -1) & (v > 0.72) & (s < 0.40)
     result[mask] = IDX["putih"]
-
 
     mask = (result == -1) & (s < 0.22)
     result[mask & (v <= 0.55)] = IDX["hitam"]
     result[mask & (v >  0.55)] = IDX["putih"]
 
-
     mask = (result == -1) & (h >= 8) & (h < 35) & (s >= 0.55) & (v >= 0.50)
     result[mask] = IDX["oren"]
-
 
     mask = (result == -1) & (h >= 35) & (h < 80) & (s >= 0.25) & (v >= 0.42)
     result[mask] = IDX["kuning"]
 
-
     mask = (result == -1) & (h >= 180) & (h < 270) & (s >= 0.50) & (v >= 0.50)
     result[mask] = IDX["biru"]
-
 
     mask = (result == -1) & ((h < 8) | (h >= 315)) & (s >= 0.55) & (v >= 0.50)
     result[mask] = IDX["merah"]
 
-
     mask = (result == -1) & (h >= 270) & (h < 315) & (s >= 0.55) & (v >= 0.50)
     result[mask] = IDX["merah"]
-
 
     unresolved = result == -1
     if unresolved.any():
@@ -151,12 +140,8 @@ def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
                 d_chroma = dist[pi, best[pi]]
                 d_hitam  = dist[pi, IDX["hitam"]]
                 d_putih  = dist[pi, IDX["putih"]]
-
-
                 if v_u[pi] < 0.55 and d_hitam < 2.0 * d_chroma:
                     final_best[pi] = IDX["hitam"]
-
-
                 elif v_u[pi] >= 0.50 and s_u[pi] < 0.50 and d_putih < 2.5 * d_chroma:
                     final_best[pi] = IDX["putih"]
 
@@ -167,17 +152,11 @@ def map_pixel_to_color_hsv(rgb_array: np.ndarray) -> np.ndarray:
 
 def preprocess_image_for_grid(img_array: np.ndarray) -> np.ndarray:
     from PIL import ImageFilter
-    INTER_SIZE = 500
+    INTER_SIZE = 500 
 
     pil_img = Image.fromarray(img_array)
-
-
     mid = pil_img.resize((INTER_SIZE, INTER_SIZE), Image.LANCZOS)
-
-
     mid = mid.filter(ImageFilter.UnsharpMask(radius=2, percent=250, threshold=2))
-
-
     final = mid.resize((GRID_SIZE, GRID_SIZE), Image.BOX)
 
     return np.array(final)
@@ -191,8 +170,6 @@ def map_to_predefined_colors(img_array: np.ndarray) -> np.ndarray:
 
 def process_formation_image(uploaded_file) -> dict:
     raw        = load_image(uploaded_file)
-
-
     preprocessed = preprocess_image_for_grid(raw)
     color_grid   = map_to_predefined_colors(preprocessed)
 
@@ -209,7 +186,6 @@ def process_formation_image(uploaded_file) -> dict:
         "preview_rgb":  preview_rgb,
         "distribution": distribution,
     }
-
 
 def render_grid_preview(
     formation_data: dict,
@@ -248,7 +224,6 @@ def render_grid_preview(
 
     plt.tight_layout(pad=2)
     return fig
-
 
 def generate_participant_base() -> pd.DataFrame:
     rows, cols = [], []
@@ -396,7 +371,6 @@ def export_to_excel(df: pd.DataFrame, formations_data: list) -> bytes:
     for r in range(3, len(df) + 3):
         ws.row_dimensions[r].height = 14
 
-
     ws2 = wb.create_sheet("Ringkasan Distribusi")
 
     ws2["A1"] = "Ringkasan Distribusi Warna per Formasi"
@@ -471,6 +445,7 @@ def export_to_excel(df: pd.DataFrame, formations_data: list) -> bytes:
     return buf.getvalue()
 
 
+
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 
 class ODMApp(tk.Tk):
@@ -524,15 +499,12 @@ class ODMApp(tk.Tk):
         self._build_sidebar()
         self._build_main()
 
-
     def _build_sidebar(self):
         sb = tk.Frame(self, bg=BG_SIDEBAR, width=280)
         sb.grid(row=0, column=0, sticky="nsew")
         sb.grid_propagate(False)
         sb.columnconfigure(0, weight=1)
         sb.rowconfigure(1, weight=1)
-
-
         hdr = tk.Frame(sb, bg=BG_SIDEBAR)
         hdr.pack(fill="x", padx=20, pady=(20, 0))
         tk.Label(hdr, text="ODM Undip 2026", bg=BG_SIDEBAR, fg=TEXT_INVERSE,
@@ -540,13 +512,10 @@ class ODMApp(tk.Tk):
         tk.Label(hdr, text="Mozaik Formation Software", bg=BG_SIDEBAR, fg=TEXT_MUTED,
                  font=("Segoe UI", 10)).pack(anchor="w")
 
-
         tk.Frame(sb, bg="#292524", height=1).pack(fill="x", padx=16, pady=12)
-
 
         tk.Label(sb, text="Gambar Formasi", bg=BG_SIDEBAR, fg=TEXT_INVERSE,
                  font=("Segoe UI", 11, "bold")).pack(padx=20, anchor="w")
-
 
         slot_canvas = tk.Canvas(sb, bg=BG_SIDEBAR, bd=0, highlightthickness=0)
         slot_scroll = ttk.Scrollbar(sb, orient="vertical", command=slot_canvas.yview)
@@ -575,10 +544,8 @@ class ODMApp(tk.Tk):
             row = tk.Frame(container, bg=BG_SIDEBAR)
             row.pack(fill="x")
 
-
             tk.Label(row, text=f"F{i:02d}", bg=BG_SIDEBAR, fg=TEXT_MUTED,
                      font=("Segoe UI", 9), width=4, anchor="w").pack(side="left")
-
 
             fl = tk.Label(row, text="Belum diunggah", bg=BG_SIDEBAR, fg="#A8A29E",
                           font=("Segoe UI", 9), anchor="w", cursor="hand2")
@@ -586,12 +553,10 @@ class ODMApp(tk.Tk):
             fl.bind("<Button-1>", lambda e, idx=i: self._pick_image(idx))
             self._slot_fname_labels[i] = fl
 
-
             dot = tk.Canvas(row, width=12, height=12, bg=BG_SIDEBAR, highlightthickness=0)
             dot.create_oval(2, 2, 10, 10, fill=BORDER, outline="", tags="dot")
             dot.pack(side="left", padx=4)
             self._slot_dots[i] = dot
-
 
             xb = tk.Label(row, text="X", bg=BG_SIDEBAR, fg="#57534E",
                           font=("Segoe UI", 8), cursor="hand2", padx=4)
@@ -600,12 +565,9 @@ class ODMApp(tk.Tk):
             xb.bind("<Enter>", lambda e, w=xb: w.config(fg=CLR_ERROR))
             xb.bind("<Leave>", lambda e, w=xb: w.config(fg="#57534E"))
             self._slot_x_btns[i] = xb
-
-
             err = tk.Label(container, text="", bg=BG_SIDEBAR, fg=CLR_ERROR,
                            font=("Segoe UI", 8), anchor="w")
             self._slot_err_labels[i] = err
-
 
         self._upload_count_lbl = tk.Label(sb, text="0 / 10 diunggah",
                                           bg=BG_SIDEBAR, fg=TEXT_MUTED,
@@ -615,19 +577,14 @@ class ODMApp(tk.Tk):
 
         tk.Frame(sb, bg="#292524", height=1).pack(fill="x", padx=16, pady=10)
 
-
         tk.Label(sb, text="Pengaturan", bg=BG_SIDEBAR, fg=TEXT_INVERSE,
                  font=("Segoe UI", 11, "bold")).pack(padx=20, anchor="w")
-
-
         tog_row = tk.Frame(sb, bg=BG_SIDEBAR)
         tog_row.pack(fill="x", padx=20, pady=6)
         tk.Label(tog_row, text="Garis grid", bg=BG_SIDEBAR, fg="#D6D3D1",
                  font=("Segoe UI", 10)).pack(side="left")
         self._toggle_canvas = self._create_toggle(tog_row, self.show_grid_var)
         self._toggle_canvas.pack(side="right")
-
-
         tk.Label(sb, text="Warna background", bg=BG_SIDEBAR, fg="#D6D3D1",
                  font=("Segoe UI", 10)).pack(padx=20, anchor="w", pady=(4, 2))
         bg_opts = {v["label"]: k for k, v in WARNA_DEFINISI.items() if k in BACKGROUND_COLORS}
@@ -636,14 +593,10 @@ class ODMApp(tk.Tk):
         combo = ttk.Combobox(sb, textvariable=self._bg_combo_var,
                              values=list(bg_opts.keys()), state="readonly", width=16)
         combo.pack(padx=20, anchor="w")
-
-
         self._process_tip = tk.Label(sb, text="Upload minimal 1 gambar untuk memulai.",
                                      bg=BG_SIDEBAR, fg=TEXT_MUTED, font=("Segoe UI", 8),
                                      wraplength=240)
         self._process_tip.pack(padx=20, pady=(12, 2), anchor="w")
-
-
         self._process_btn = tk.Label(sb, text="Proses Semua Gambar",
                                      bg=PRIMARY, fg=TEXT_INVERSE,
                                      font=("Segoe UI", 12, "bold"),
@@ -674,14 +627,11 @@ class ODMApp(tk.Tk):
         draw()
         return c
 
-
     def _build_main(self):
         main = tk.Frame(self, bg=BG_BASE)
         main.grid(row=0, column=1, sticky="nsew")
         main.columnconfigure(0, weight=1)
         main.rowconfigure(1, weight=1)
-
-
         topbar = tk.Frame(main, bg=BG_SURFACE, height=44)
         topbar.grid(row=0, column=0, sticky="ew")
         topbar.grid_propagate(False)
@@ -691,8 +641,6 @@ class ODMApp(tk.Tk):
         tk.Label(topbar, text="Grid 60x60  |  3.600 Peserta  |  6 Warna",
                  bg=BG_SURFACE, fg=TEXT_MUTED, font=("Segoe UI", 10)).pack(side="right", padx=20)
         tk.Frame(topbar, bg=BORDER, height=1).place(relx=0, rely=1.0, relwidth=1.0, anchor="sw")
-
-
         outer = tk.Frame(main, bg=BG_BASE)
         outer.grid(row=1, column=0, sticky="nsew")
         outer.columnconfigure(0, weight=1)
@@ -720,18 +668,12 @@ class ODMApp(tk.Tk):
 
     def _build_content_area(self):
         c = self._content
-
-
         self._metrics_frame = tk.Frame(c, bg=BG_BASE)
         self._metrics_frame.pack(fill="x", padx=24, pady=(16, 8))
         self._build_metrics()
-
-
         self._step_frame = tk.Frame(c, bg=BG_BASE)
         self._step_frame.pack(fill="x", padx=24, pady=8)
         self._build_step_indicator()
-
-
         self._proc_frame = tk.Frame(c, bg=BG_BASE)
         self._proc_label = tk.Label(self._proc_frame, text="", bg=BG_BASE, fg=TEXT_MUTED,
                                     font=("Segoe UI", 10))
@@ -740,8 +682,6 @@ class ODMApp(tk.Tk):
                                           highlightthickness=0)
         self._proc_bar_canvas.pack(fill="x", pady=(4, 0))
         self._proc_bar_fill = None
-
-
         tk.Label(c, text="Preview Formasi", bg=BG_BASE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 13, "bold")).pack(padx=24, pady=(12, 4), anchor="w")
 
@@ -750,20 +690,14 @@ class ODMApp(tk.Tk):
         self._tab_labels = {}
         self._tab_indicators = {}
         self._build_tab_row()
-
-
         self._formation_frame = tk.Frame(c, bg=BG_BASE)
         self._formation_frame.pack(fill="both", expand=True, padx=24, pady=(0, 8))
         self._show_empty_state()
-
-
         tk.Label(c, text="Ringkasan Distribusi Warna", bg=BG_BASE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 13, "bold")).pack(padx=24, pady=(8, 4), anchor="w")
         self._dist_frame = tk.Frame(c, bg=BG_BASE)
         self._dist_frame.pack(fill="x", padx=24, pady=(0, 8))
         self._dist_tree = None
-
-
         exp_card = tk.Frame(c, bg=BG_SURFACE, highlightbackground=BORDER, highlightthickness=1)
         exp_card.pack(fill="x", padx=24, pady=8)
 
@@ -777,7 +711,6 @@ class ODMApp(tk.Tk):
         btn_row = tk.Frame(exp_card, bg=BG_SURFACE)
         btn_row.pack(padx=16, pady=8, anchor="w")
 
-
         self._gen_btn = tk.Label(btn_row, text="Generate Excel", bg=BG_SURFACE,
                                  fg=PRIMARY, font=("Segoe UI", 10, "bold"),
                                  cursor="hand2", padx=16, pady=6,
@@ -786,8 +719,6 @@ class ODMApp(tk.Tk):
         self._gen_btn.bind("<Button-1>", lambda e: self._generate_excel())
         self._gen_btn.bind("<Enter>", lambda e: self._gen_btn.config(bg="#FFF7ED"))
         self._gen_btn.bind("<Leave>", lambda e: self._gen_btn.config(bg=BG_SURFACE))
-
-
         self._dl_btn = tk.Label(btn_row, text="Unduh File Excel", bg="#D6D3D1",
                                 fg=BG_SURFACE, font=("Segoe UI", 10, "bold"),
                                 padx=16, pady=6)
@@ -797,8 +728,6 @@ class ODMApp(tk.Tk):
         self._excel_status = tk.Label(exp_card, text="", bg=BG_SURFACE, fg=TEXT_MUTED,
                                       font=("Segoe UI", 9))
         self._excel_status.pack(padx=16, pady=(0, 12), anchor="w")
-
-
         tk.Label(c, text="Pratinjau 10 baris pertama", bg=BG_BASE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 13, "bold")).pack(padx=24, pady=(8, 4), anchor="w")
         self._preview_frame = tk.Frame(c, bg=BG_BASE)
@@ -901,8 +830,6 @@ class ODMApp(tk.Tk):
         self._formation_frame.columnconfigure(0, weight=0, minsize=260)
         self._formation_frame.columnconfigure(1, weight=1)
         self._formation_frame.rowconfigure(0, weight=1)
-
-
         left = tk.Frame(self._formation_frame, bg=BG_SURFACE, highlightbackground=BORDER,
                         highlightthickness=1, width=260)
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=4)
@@ -925,7 +852,6 @@ class ODMApp(tk.Tk):
             tk.Label(thumb_frame, text="[Tidak tersedia]", bg=BG_SURFACE, fg=TEXT_MUTED,
                      font=("Segoe UI", 9)).pack(padx=8, pady=8)
 
-
         tk.Label(left, text="Distribusi Warna", bg=BG_SURFACE, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 11, "bold")).pack(padx=12, pady=(12, 4), anchor="w")
         total = sum(fdata["distribution"].values())
@@ -946,7 +872,6 @@ class ODMApp(tk.Tk):
             tk.Label(rf, text=f"{cnt} ({pct:.1f}%)", bg=BG_SURFACE, fg=TEXT_MUTED,
                      font=("Segoe UI", 8)).pack(side="left")
 
-
         right = tk.Frame(self._formation_frame, bg=BG_BASE)
         right.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=4)
         right.columnconfigure(0, weight=1)
@@ -962,9 +887,7 @@ class ODMApp(tk.Tk):
         self._canvas_refs[fi] = canvas
         plt.close(fig)
 
-
     def _pick_image(self, idx):
-
         if idx in self.formations_data:
             proceed = messagebox.askyesno("Konfirmasi",
                 "Formasi ini sudah diproses. Upload gambar baru "
@@ -977,8 +900,6 @@ class ODMApp(tk.Tk):
             filetypes=[("Gambar", "*.jpg *.jpeg *.png *.webp"), ("Semua file", "*.*")])
         if not path:
             return
-
-
         import os
         ext = os.path.splitext(path)[1].lower()
         if ext not in ALLOWED_EXT:
@@ -986,10 +907,8 @@ class ODMApp(tk.Tk):
             self._slot_err_labels[idx].pack(fill="x", pady=(1, 0))
             return
 
-
         self._slot_err_labels[idx].config(text="")
         self._slot_err_labels[idx].pack_forget()
-
 
         if idx in self.formations_data:
             del self.formations_data[idx]
@@ -1032,7 +951,6 @@ class ODMApp(tk.Tk):
                 color = BORDER
             dot.create_oval(2, 2, 10, 10, fill=color, outline="", tags="dot")
 
-
         if n > 0:
             self._process_btn.config(bg=PRIMARY, cursor="hand2")
             self._process_tip.config(text="")
@@ -1041,7 +959,6 @@ class ODMApp(tk.Tk):
             self._process_tip.config(text="Upload minimal 1 gambar untuk memulai.")
 
         self._build_step_indicator()
-
 
     def _start_processing(self):
         if not self.uploaded_paths:
@@ -1103,11 +1020,8 @@ class ODMApp(tk.Tk):
         self._dl_btn.config(bg="#D6D3D1")
         self._dl_btn_enabled = False
         self._excel_status.config(text="")
-
-
         last = max(self.formations_data.keys())
         self._select_tab(last)
-
 
     def _rebuild_dist_table(self):
         for w in self._dist_frame.winfo_children():
@@ -1139,7 +1053,6 @@ class ODMApp(tk.Tk):
         tree.pack(fill="x", side="top")
         xsb.pack(fill="x", side="top")
         self._dist_tree = tree
-
 
     def _generate_excel(self):
         if not self.formations_data:
@@ -1206,7 +1119,6 @@ class ODMApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error", f"Gagal menyimpan file:\n{e}")
 
-
     def _rebuild_preview_table(self):
         for w in self._preview_frame.winfo_children():
             w.destroy()
@@ -1237,7 +1149,6 @@ class ODMApp(tk.Tk):
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure(0, weight=1)
         self._preview_tree = tree
-
 
 def main():
     app = ODMApp()
