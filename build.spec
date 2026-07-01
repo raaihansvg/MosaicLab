@@ -8,6 +8,7 @@ datas_matplotlib, binaries_matplotlib, hiddenimports_matplotlib = collect_all('m
 datas_PIL,        binaries_PIL,        hiddenimports_PIL        = collect_all('PIL')
 datas_pandas,     binaries_pandas,     hiddenimports_pandas     = collect_all('pandas')
 datas_numpy,      binaries_numpy,      hiddenimports_numpy      = collect_all('numpy')
+datas_tkinterdnd2, binaries_tkinterdnd2, hiddenimports_tkinterdnd2 = collect_all('tkinterdnd2')
 datas_assets = [(path, 'assets/icons') for path in glob.glob('assets/icons/*.png')]
 
 all_datas = (
@@ -16,6 +17,7 @@ all_datas = (
     + datas_PIL
     + datas_pandas
     + datas_numpy
+    + datas_tkinterdnd2
     + datas_assets
 )
 
@@ -25,6 +27,7 @@ all_binaries = (
     + binaries_PIL
     + binaries_pandas
     + binaries_numpy
+    + binaries_tkinterdnd2
 )
 
 hidden = (
@@ -33,6 +36,7 @@ hidden = (
     + hiddenimports_PIL
     + hiddenimports_pandas
     + hiddenimports_numpy
+    + hiddenimports_tkinterdnd2
     + collect_submodules('sklearn')
     + collect_submodules('sklearn.utils')
     + collect_submodules('sklearn.cluster')

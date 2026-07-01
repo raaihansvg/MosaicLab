@@ -157,6 +157,16 @@ How to download the generated `.exe`:
 6. Extract the artifact file.
 7. Run `ODM_Undip_2026_Mozaik.exe` on Windows.
 
+### Windows Security and Drag-and-Drop Notes
+
+Windows may show a SmartScreen warning such as "Windows protected your PC" before opening the generated `.exe`. This happens because the PyInstaller build is not code-signed yet. To remove this warning for normal users, the Windows executable needs to be signed with a trusted code-signing certificate.
+
+If drag and drop does not work on Windows:
+
+- Run the app normally, not with `Run as administrator`. Windows blocks drag and drop between Explorer and an app when they run at different privilege levels.
+- Make sure the `.exe` is built from the latest `build.spec`, which bundles `tkinterdnd2` and its native `tkdnd` files.
+- If the file was downloaded from the internet, right-click the `.exe`, choose `Properties`, then use `Unblock` if Windows shows that option.
+
 ## Project Structure
 
 ```text
