@@ -206,4 +206,4 @@ SVG files may be kept locally for design purposes, but they do not need to be tr
 
 ## License
 
-This project was created for the ODM Undip 2026 Mosaic Formation workflow. Use and modify it as needed for the project.
+This project is licensed for internal use within the ODM Undip 2026 Mosaic Formation project. See the [LICENSE](LICENSE) file for details.
