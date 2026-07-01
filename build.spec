@@ -96,9 +96,6 @@ hidden = (
     ]
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Analysis
-# ─────────────────────────────────────────────────────────────────────────────
 a = Analysis(
     ['main.py'],
     pathex=[],
@@ -109,7 +106,6 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Exclude heavy unused packages to reduce exe size
         'streamlit',
         'IPython',
         'jupyter',
@@ -139,14 +135,14 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,           # compress with UPX if available; set to False if UPX not installed
+    upx=True,          
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,      # windowed=True → no console window
+    console=False,      
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,          # ← replace with 'odm_icon.ico' to add a custom icon
-    onefile=True,       # single .exe output
+    icon=None,          
+    onefile=True,       
 )
