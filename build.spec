@@ -14,6 +14,7 @@ all_datas = (
     + datas_PIL
     + datas_pandas
     + datas_numpy
+    + [('assets', 'assets')]
 )
 
 all_binaries = (

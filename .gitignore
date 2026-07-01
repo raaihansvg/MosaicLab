@@ -12,3 +12,6 @@ build/
 odm_mozaik.log
 .git/
 assets/
+!assets/
+!assets/icons/
+!assets/icons/**
